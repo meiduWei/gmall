@@ -142,6 +142,7 @@ object JsonMock {
   def main(args: Array[String]): Unit = {
     // 测试
     generateLog()
+
   }
 }
 
