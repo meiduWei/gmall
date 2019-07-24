@@ -7,7 +7,7 @@ import java.util.Date
 import com.alibaba.fastjson.JSON
 import com.atguigu.gmall.realtime.bean.StartupLog
 import com.atguigu.gmall.realtime.util.{MyKafkaUtil, RedisUtil}
-import com.atguigu.gmall0225.common.util.GmallConstant
+import com.atguigu.gmall0225.common.util.{GmallConstant, MyESUtil}
 import org.apache.spark.SparkConf
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
@@ -52,14 +52,19 @@ object DauApp {
     starupLogDSteam.foreachRDD(rdd => {
       rdd.foreachPartition(it => {
         val client: Jedis = RedisUtil.getJedisClient
+        val startupLogs: List[StartupLog] = it.toList
         it.foreach(startupLog => {
           // 存入到 Redis value 类型 set, 存储 uid
 
           client.sadd(GmallConstant.REDIS_DAU_KEY + ":"+startupLog.logDate, startupLog.uid)
         })
         client.close()
+        //3.0 保存到ES
+        MyESUtil.insertBulk(GmallConstant.ES_INDEX_DAU,startupLogs)
       })
     })
+
+
     ssc.start()
     ssc.awaitTermination()
   }
